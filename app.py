@@ -6,30 +6,36 @@ import io
 st.set_page_config(page_title="5色ディザリングツール", layout="wide")
 
 st.title("🎨 5色カラー選択・ディザリングツール")
-st.write("表示したい5つの色を選択し、画像をレトロなスタイルに変換します。")
+st.write("最適な5色がプリセットされています。画像をアップロードして変換を開始してください。")
 
 # --- 側邊欄：顯示色設定 ---
 with st.sidebar:
     st.header("表示色の設定")
-    st.write("画像に使用したい5つの色を選んでください。")
-    st.caption("※使いたくない色（赤、白など）は選ばないようにしてください。")
+    st.write("画像に使用する5色です（変更も可能です）。")
+    
+    # 這裡設定了黃金五色預設值
+    # 1. 純黑 (暗部)
+    # 2. 純白 (亮部)
+    # 3. 中灰色 (過渡)
+    # 4. 深藍色 (冷色/主題A)
+    # 5. 金黃色 (暖色/主題B)
+    gold_palette = ["#000000", "#FFFFFF", "#808080", "#0000FF", "#FFD700"]
     
     display_colors = []
-    # 預設一組好搭配的顏色
-    default_palette = ["#000000", "#00FF00", "#0000FF", "#FFFF00", "#555555"]
+    labels = ["極暗 (シャドウ)", "極亮 (ハイライト)", "中間色 (グレー)", "アクセント1 (冷色)", "アクセント2 (暖色)"]
+    
     for i in range(5):
-        c = st.color_picker(f"表示色 {i+1}", default_palette[i], key=f"cp_{i}")
+        c = st.color_picker(labels[i], gold_palette[i], key=f"cp_{i}")
         display_colors.append(c)
     
     st.divider()
     use_dither = st.checkbox("ディザリングを有効にする", value=True)
-    st.info("ヒント：コントラストがはっきりした画像ほど、きれいに仕上がります。")
+    st.info("この5色は、ディテールを最もきれいに再現できるよう最適化されています。")
 
 # --- 執行與顯示 ---
 uploaded_file = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
-    # 讀取並轉換為 RGB
     raw_img = Image.open(uploaded_file).convert('RGB')
     
     # 1. 準備色板
@@ -40,8 +46,6 @@ if uploaded_file:
     for c in display_colors:
         palette_data.extend(hex_to_rgb(c))
     
-    # 建立 Pillow P 模式所需的色板圖片
-    # 必須填滿 256 色 (768 個數值)，其餘補 0
     p_img = Image.new('P', (1, 1))
     p_img.putpalette(palette_data + [0] * (768 - len(palette_data)))
 
