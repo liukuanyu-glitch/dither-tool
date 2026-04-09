@@ -49,4 +49,45 @@ def apply_multi_rule_out(img, target_hex_list):
         final_mask = final_mask | (dist < threshold)
     
     # 將排除色轉為灰階
-    grayscale = np.dot(data[final_mask][...,:3], [0.298
+    grayscale = np.dot(data[final_mask][...,:3], [0.2989, 0.5870, 0.1140])
+    data[final_mask] = np.stack([grayscale, grayscale, grayscale], axis=-1)
+    
+    return Image.fromarray(np.uint8(data))
+
+# --- 主要執行區塊 ---
+uploaded_file = st.file_uploader("画像をアップロードしてください", type=["jpg", "jpeg", "png"])
+
+if uploaded_file:
+    raw_img = Image.open(uploaded_file).convert('RGB')
+    
+    # 1. 執行 Rule Out
+    filtered_img = apply_multi_rule_out(raw_img, exclude_colors)
+    
+    # 2. 準備固定的顯示色板
+    def hex_to_rgb(h):
+        return tuple(int(h.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+    
+    palette_data = []
+    for c in FIXED_PALETTE:
+        palette_data.extend(hex_to_rgb(c))
+    
+    p_img = Image.new('P', (1, 1))
+    p_img.putpalette(palette_data + [0] * (768 - len(palette_data)))
+
+    # 3. 量化與抖動
+    dither_mode = Image.FLOYDSTEINBERG if use_dither else Image.NONE
+    result = filtered_img.quantize(palette=p_img, dither=dither_mode).convert('RGB')
+
+    # 顯示
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("元の画像")
+        st.image(raw_img, use_container_width=True)
+    with col2:
+        st.subheader("変換結果")
+        st.image(result, use_container_width=True)
+        
+        # 下載
+        buf = io.BytesIO()
+        result.save(buf, format="PNG")
+        st.download_button("📥 変換した画像をダウンロード", data=buf.getvalue(), file_name="dither_result.png")
